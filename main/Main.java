@@ -3,11 +3,12 @@ package main;
 import checker.Checker;
 import checker.CheckerConstants;
 import fileio.input.LibraryInput;
-import fileio.input.SongInput;
 import musicplayer.MusicPlayer;
-import musicplayer.Playlist;
+import musicplayer.Playback;
 import mydata.InputData;
-import mydata.PodcastData;
+import mydata.Playlist;
+import mydata.Podcast;
+import mydata.Song;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -83,24 +84,24 @@ public final class Main {
                 LibraryInput.class);
         ArrayNode outputs = objectMapper.createArrayNode();
 
-        /* Read commands. */
+        /* Read commands and transfer input classes in data classes. */
         InputData[] commands = objectMapper.readValue(new File("input/" + filePathInput),
                 InputData[].class);
-
-        /* Transfer podcasts and episodes. */
-        ArrayList<PodcastData> inputPodcasts = PodcastData.initPodcastData(library.getPodcasts());
-
+        ArrayList<Podcast> inputPodcasts = Podcast.initPodcastData(library.getPodcasts());
+        ArrayList<Song> inputSongs = Song.initSongsData(library.getSongs());
         /* Create for every user it's player. */
         ArrayList<MusicPlayer> players = new ArrayList<>();
         MusicPlayer.initPlayers(players, library, inputPodcasts);
-
         /* Create array to keep all created playlists. */
         ArrayList<Playlist> createdPlaylists = new ArrayList<>();
-
         /* Iterate over commands. */
         for (InputData command : commands) {
-            /* Get the player for the coresponding user && check it's status. */
+            /* Get the player && playback for the coresponding user && check it's status. */
             MusicPlayer currplayer = MusicPlayer.findMyPlayer(players, command.getUsername());
+            Playback currPlayback = null;
+            if (currplayer != null) {
+                currPlayback = currplayer.getPlayback();
+            }
 
             /* Update timeline. */
             MusicPlayer.setTimestamp(command.getTimestamp());
@@ -114,8 +115,8 @@ public final class Main {
             switch (command.getCommand()) {
                 case "search" -> {
                     ArrayNode statusSearch = objectMapper.createArrayNode();
-                    outMessage = command.searchTrack(currplayer, createdPlaylists,
-                            inputPodcasts, library, statusSearch);
+                    outputcmd.put("message", command.searchTrack(currplayer, createdPlaylists,
+                            inputPodcasts, inputSongs, statusSearch));
                     outputcmd.put("results", statusSearch);
                 }
                 case "select" -> {
@@ -146,7 +147,7 @@ public final class Main {
                     int playlistid = command.getPlaylistId();
                     if (InputData.checkAddRemove(currplayer, playlistid, outputcmd)) {
                         Playlist getplaylist = currplayer.getPlaylists().get(playlistid - 1);
-                        SongInput getsong = currplayer.getSelectedSong();
+                        Song getsong = (Song) currplayer.getSelectedTrack();
                         outMessage = Playlist.addRemoveInPlaylist(getplaylist, getsong);
                     }
                 }
@@ -169,13 +170,13 @@ public final class Main {
                 }
                 case "follow" -> {
                     if (InputData.checkFollow(currplayer, outputcmd)) {
-                        Playlist playlist = currplayer.getSelectedPlaylist();
+                        Playlist playlist = (Playlist) currplayer.getSelectedTrack();
                         outMessage = playlist.followPlaylist(currplayer);
                     }
                 }
                 case "getTop5Songs" -> {
                     outResults = objectMapper.createArrayNode();
-                    MusicPlayer.getTop5Songs(library, players, outResults);
+                    MusicPlayer.getTop5Songs(inputSongs, players, outResults);
                 }
                 case "getTop5Playlists" -> {
                     outResults = objectMapper.createArrayNode();
@@ -184,23 +185,23 @@ public final class Main {
                 case "repeat" -> {
                     currplayer.checkStatus();
                     if (InputData.checkRepeat(currplayer, outputcmd)) {
-                        outMessage = currplayer.getPlayback().repeat();
+                        outMessage = currPlayback.repeat();
                     }
                 }
                 case "shuffle" -> {
                     currplayer.checkStatus();
                     if (InputData.checkShuffle(currplayer, outputcmd)) {
-                        outMessage = currplayer.getPlayback().changeShuffle(command.getSeed());
+                        outMessage = currPlayback.changeShuffle(command.getSeed());
                     }
                 }
                 case "forward" -> {
                     if (InputData.checkForBackWard(currplayer, outputcmd)) {
-                        outMessage = currplayer.getPlayback().forward();
+                        outMessage = ((Podcast) currPlayback.getCurrTrack()).forward(currPlayback);
                     }
                 }
                 case "backward" -> {
                     if (InputData.checkForBackWard(currplayer, outputcmd)) {
-                        outMessage = currplayer.getPlayback().backward();
+                        outMessage = ((Podcast) currPlayback.getCurrTrack()).backward(currPlayback);
                     }
                 }
                 case "next" -> {

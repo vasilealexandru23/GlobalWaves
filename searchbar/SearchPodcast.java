@@ -1,18 +1,18 @@
 package searchbar;
 
 import lombok.Getter;
-import mydata.PodcastData;
+import mydata.Podcast;
 
 import java.util.ArrayList;
 
 public final class SearchPodcast extends SearchCommand {
     @Getter
-    private ArrayList<PodcastData> results;
+    private ArrayList<Podcast> results;
 
     /* Maximum search size. */
     private final int maxSearch = 5;
 
-    public void setResults(final ArrayList<PodcastData> results) {
+    public void setResults(final ArrayList<Podcast> results) {
         this.results = results;
     }
 
@@ -21,10 +21,10 @@ public final class SearchPodcast extends SearchCommand {
      * @param podcasts  collection where to search for
      * @param myfilters specified criteria for podcasts.
      */
-    public void searchPodcasts(final ArrayList<PodcastData> podcasts, final Filters myfilters) {
+    public void searchPodcasts(final ArrayList<Podcast> podcasts, final Filters myfilters) {
         results = new ArrayList<>();
 
-        for (PodcastData podcast : podcasts) {
+        for (Podcast podcast : podcasts) {
             boolean podcastWorks = podcast.getName() == null
                     || myfilters.getName() == null
                     || podcast.getName().startsWith(myfilters.getName());

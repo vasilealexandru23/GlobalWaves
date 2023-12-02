@@ -1,12 +1,14 @@
 package mydata;
 
-public final class EpisodeData {
+import musicplayer.AudioCollection;
+
+public final class Episode extends AudioCollection {
     private String name;
     private Integer duration;
     private String description;
     private int timeWatched;
 
-    public EpisodeData(final String name, final Integer duration, final String description) {
+    public Episode(final String name, final Integer duration, final String description) {
         this.name = name;
         this.duration = duration;
         this.description = description;

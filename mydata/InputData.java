@@ -5,10 +5,8 @@ import java.util.ArrayList;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import fileio.input.LibraryInput;
-import fileio.input.SongInput;
+import musicplayer.AudioCollection;
 import musicplayer.MusicPlayer;
-import musicplayer.Playlist;
 import searchbar.Filters;
 import searchbar.SearchCommand;
 import searchbar.SearchPlaylist;
@@ -154,8 +152,8 @@ public final class InputData {
      */
     public String searchTrack(final MusicPlayer player,
             final ArrayList<Playlist> createdPlaylists,
-            final ArrayList<PodcastData> inputPodcasts,
-            final LibraryInput library, final ArrayNode outResults) {
+            final ArrayList<Podcast> inputPodcasts,
+            final ArrayList<Song> songs, final ArrayNode outResults) {
 
         /* Unload track of player. */
         player.unloadTrack();
@@ -163,21 +161,21 @@ public final class InputData {
         /* Compute search. */
         Filters reqFilters = this.searchcmd.getFilters();
         SearchCommand mySearch = this.searchcmd.search(this.username,
-                createdPlaylists, library.getSongs(),
+                createdPlaylists, songs,
                 inputPodcasts, reqFilters);
 
         player.setLastSearch(mySearch);
 
         /* Prepare output. */
         if (mySearch.getType().equals("song")) {
-            for (SongInput song : ((SearchSong) mySearch).getResults()) {
+            for (Song song : ((SearchSong) mySearch).getResults()) {
                 outResults.add(song.getName());
             }
             return "Search returned "
                     + ((SearchSong) mySearch).getResults().size()
                     + " results";
         } else if (mySearch.getType().equals("podcast")) {
-            for (PodcastData podcast : ((SearchPodcast) mySearch).getResults()) {
+            for (Podcast podcast : ((SearchPodcast) mySearch).getResults()) {
                 outResults.add(podcast.getName());
             }
             return "Search returned "
@@ -230,7 +228,7 @@ public final class InputData {
         }
 
         /* Check for playlist. */
-        if (player.getPlayback().getCurrPlaylist() == null) {
+        if (player.getPlayback().getCurrTrack().getType() != AudioCollection.AudioType.PLAYLIST) {
             output.put("message", noPLAYLIST);
             return false;
         }
@@ -256,7 +254,7 @@ public final class InputData {
         }
 
         /* Check for podcast. */
-        if (player.getPlayback().getCurrPodcast() == null) {
+        if (player.getPlayback().getCurrTrack().getType() != AudioCollection.AudioType.PODCAST) {
             output.put("message", noPODCAST);
             return false;
         }
@@ -291,7 +289,7 @@ public final class InputData {
         }
 
         /* Check if song is loaded. */
-        if (player.getSelectedSong() == null) {
+        if (player.getSelectedTrack().getType() != AudioCollection.AudioType.SONG) {
             output.put("message", noSONG);
             return false;
         }
@@ -337,7 +335,7 @@ public final class InputData {
         }
 
         /* Check by playlist. */
-        if (player.getSelectedPlaylist() == null) {
+        if (player.getSelectedTrack().getType() != AudioCollection.AudioType.PLAYLIST) {
             output.put("message", noPLAYLIST);
             return false;
         }
@@ -363,7 +361,7 @@ public final class InputData {
         }
 
         /* Check by song. */
-        if (player.getSelectedPodcast() != null) {
+        if (player.getSelectedTrack().getType() == AudioCollection.AudioType.PODCAST) {
             output.put("message", noSONG);
             return false;
         }

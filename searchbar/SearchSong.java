@@ -2,16 +2,16 @@ package searchbar;
 
 import java.util.ArrayList;
 
-import fileio.input.SongInput;
 import lombok.Getter;
+import mydata.Song;
 
 public final class SearchSong extends SearchCommand {
     @Getter
-    private ArrayList<SongInput> results;
+    private ArrayList<Song> results;
 
     private final int maxSearch = 5;
 
-    public void setResults(final ArrayList<SongInput> results) {
+    public void setResults(final ArrayList<Song> results) {
         this.results = results;
     }
 
@@ -20,10 +20,10 @@ public final class SearchSong extends SearchCommand {
      * @param songs             where to search songs
      * @param myfilters         given filters by user
      */
-    public void searchSongs(final ArrayList<SongInput> songs, final Filters myfilters) {
+    public void searchSongs(final ArrayList<Song> songs, final Filters myfilters) {
         results = new ArrayList<>();
 
-        for (SongInput song : songs) {
+        for (Song song : songs) {
             /* Check name of song. */
             boolean goalsong = song.getName() == null || myfilters.getName() == null
                     || song.getName().startsWith(myfilters.getName());

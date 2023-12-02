@@ -1,7 +1,7 @@
 package searchbar;
 
 import lombok.Getter;
-import musicplayer.Playlist;
+import mydata.Playlist;
 
 import java.util.ArrayList;
 

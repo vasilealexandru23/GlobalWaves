@@ -1,8 +1,11 @@
 package musicplayer;
 
 import lombok.Getter;
-import mydata.EpisodeData;
-import mydata.PodcastData;
+import musicplayer.AudioCollection.AudioType;
+import mydata.Episode;
+import mydata.Playlist;
+import mydata.Podcast;
+import mydata.Song;
 import searchbar.SearchCommand;
 import searchbar.SearchPlaylist;
 import searchbar.SearchPodcast;
@@ -10,13 +13,10 @@ import searchbar.SearchSong;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import fileio.input.LibraryInput;
-import fileio.input.SongInput;
 import fileio.input.UserInput;
 
 public final class MusicPlayer {
@@ -30,11 +30,8 @@ public final class MusicPlayer {
     private boolean loaded;
 
     @Getter
-    private Playlist selectedPlaylist;
-    @Getter
-    private SongInput selectedSong;
-    @Getter
-    private PodcastData selectedPodcast;
+    private AudioCollection selectedTrack;
+
     @Getter
     private static int timestamp;
     @Getter
@@ -42,9 +39,9 @@ public final class MusicPlayer {
     @Getter
     private ArrayList<Playlist> playlists = new ArrayList<>();
     @Getter
-    private ArrayList<SongInput> likedSongs = new ArrayList<>();
+    private ArrayList<Song> likedSongs = new ArrayList<>();
     @Getter
-    private ArrayList<PodcastData> podcasts = new ArrayList<>();
+    private ArrayList<Podcast> podcasts = new ArrayList<>();
     @Getter
     private ArrayList<Playlist> followedPlaylists = new ArrayList<>();
 
@@ -72,16 +69,8 @@ public final class MusicPlayer {
         this.loaded = loaded;
     }
 
-    public void setSelectedPlaylist(final Playlist selectedPlaylist) {
-        this.selectedPlaylist = selectedPlaylist;
-    }
-
-    public void setSelectedSong(final SongInput selectedSong) {
-        this.selectedSong = selectedSong;
-    }
-
-    public void setSelectedPodcast(final PodcastData selectedPodcast) {
-        this.selectedPodcast = selectedPodcast;
+    public void setSelectedTrack(final AudioCollection selectedTrack) {
+        this.selectedTrack = selectedTrack;
     }
 
     public static void setTimestamp(final int timestamp) {
@@ -96,11 +85,11 @@ public final class MusicPlayer {
         this.playlists = playlists;
     }
 
-    public void setLikedSongs(final ArrayList<SongInput> likedSongs) {
+    public void setLikedSongs(final ArrayList<Song> likedSongs) {
         this.likedSongs = likedSongs;
     }
 
-    public void setPodcasts(final ArrayList<PodcastData> podcasts) {
+    public void setPodcasts(final ArrayList<Podcast> podcasts) {
         this.podcasts = podcasts;
     }
 
@@ -130,9 +119,7 @@ public final class MusicPlayer {
      * Function that sets selections on null.
      */
     private void clearSelection() {
-        this.selectedSong = null;
-        this.selectedPodcast = null;
-        this.selectedPlaylist = null;
+        this.selectedTrack = null;
         this.lastSelect = -1;
     }
 
@@ -141,7 +128,9 @@ public final class MusicPlayer {
      */
     public void unloadTrack() {
         if (this.isLoaded()) {
-            this.getPlayback().checkCurrentEpisode();
+            if (this.getPlayback().getCurrTrack().getType() == AudioCollection.AudioType.PODCAST) {
+                ((Podcast) this.getPlayback().getCurrTrack()).checkTrack(this.getPlayback());
+            }
             this.initNewPlayback();
             this.getPlayback().setPlayPause(false);
             this.setLoaded(false);
@@ -169,20 +158,26 @@ public final class MusicPlayer {
             if (((SearchSong) lastSearch).getResults().size() <= mySelect) {
                 return badID;
             }
-            this.selectedSong = ((SearchSong) lastSearch).getResults().get(mySelect);
-            track = selectedSong.getName();
+
+            this.selectedTrack = ((SearchSong) lastSearch).getResults().get(mySelect);
+            selectedTrack.setType(AudioCollection.AudioType.SONG);
+            track = selectedTrack.getName();
         } else if (this.lastSearch.getType().equals("podcast")) {
             if (((SearchPodcast) lastSearch).getResults().size() <= mySelect) {
                 return badID;
             }
-            this.selectedPodcast = ((SearchPodcast) lastSearch).getResults().get(mySelect);
-            track = selectedPodcast.getName();
+
+            this.selectedTrack = ((SearchPodcast) lastSearch).getResults().get(mySelect);
+            selectedTrack.setType(AudioCollection.AudioType.PODCAST);
+            track = selectedTrack.getName();
         } else {
             if (((SearchPlaylist) lastSearch).getResults().size() <= mySelect) {
                 return badID;
             }
-            this.selectedPlaylist = ((SearchPlaylist) lastSearch).getResults().get(mySelect);
-            track = selectedPlaylist.getName();
+
+            this.selectedTrack = ((SearchPlaylist) lastSearch).getResults().get(mySelect);
+            selectedTrack.setType(AudioCollection.AudioType.PLAYLIST);
+            track = selectedTrack.getName();
         }
 
         this.lastSelect = mySelect;
@@ -195,16 +190,15 @@ public final class MusicPlayer {
      * @param library data to initialize music players.
      */
     public static void initPlayers(final ArrayList<MusicPlayer> players,
-            final LibraryInput library, final ArrayList<PodcastData> podcasts) {
+            final LibraryInput library, final ArrayList<Podcast> podcasts) {
 
         for (UserInput user : library.getUsers()) {
             MusicPlayer newplayer = new MusicPlayer(user.getUsername());
-            for (PodcastData podcast : podcasts) {
+            for (Podcast podcast : podcasts) {
                 /* Set current episode to first one. */
-                podcast.setCurrEpisode(podcast.getEpisodes().get(0));
                 podcast.setIndexEpisode(0);
 
-                for (EpisodeData episode : podcast.getEpisodes()) {
+                for (Episode episode : podcast.getEpisodes()) {
                     /* Set time watched to 0. */
                     episode.setTimeWatched(0);
                 }
@@ -238,7 +232,7 @@ public final class MusicPlayer {
      * @param song      given song
      * @return          return if song is liked
      */
-    public boolean islikedSong(final SongInput song) {
+    public boolean islikedSong(final Song song) {
         return likedSongs.contains(song);
     }
 
@@ -246,7 +240,7 @@ public final class MusicPlayer {
      * Adds a given song to liked songs collection.
      * @param song      given song to add
      */
-    public void likeSong(final SongInput song) {
+    public void likeSong(final Song song) {
         likedSongs.add(song);
     }
 
@@ -254,7 +248,7 @@ public final class MusicPlayer {
      * Remove a given song from liked songs colletction.
      * @param song      given song to remove
      */
-    public void unlikeSong(final SongInput song) {
+    public void unlikeSong(final Song song) {
         likedSongs.remove(song);
     }
 
@@ -273,7 +267,7 @@ public final class MusicPlayer {
      */
     public ArrayList<String> likedSongNames() {
         ArrayList<String> likedSongNames = new ArrayList<>();
-        for (SongInput song : likedSongs) {
+        for (Song song : likedSongs) {
             likedSongNames.add(song.getName());
         }
 
@@ -288,17 +282,19 @@ public final class MusicPlayer {
         String okLIKED = "Like registered successfully.";
         String okUNLKED = "Unlike registered successfully.";
 
-        SongInput currSong;
+        Song currSong;
 
-        if (this.getSelectedSong() != null) {
-            currSong = this.getSelectedSong();
+        if (selectedTrack.getType() == AudioType.SONG) {
+            currSong = (Song) selectedTrack;
         } else {
-            currSong = this.getPlayback().currPlayingSong();
+            currSong = ((Playlist) (this.getPlayback().getCurrTrack())).currPlayingSong(playback);
         }
         if (this.islikedSong(currSong)) {
+            currSong.setNrLikes(currSong.getNrLikes() - 1);
             this.unlikeSong(currSong);
             return okUNLKED;
         } else {
+            currSong.setNrLikes(currSong.getNrLikes() + 1);
             this.likeSong(currSong);
             return okLIKED;
         }
@@ -312,12 +308,14 @@ public final class MusicPlayer {
         String successLOAD = "Playback loaded successfully.";
         this.loaded = true;
         this.initNewPlayback();
-        if (this.selectedSong != null) {
-            this.getPlayback().setCurrSong(selectedSong);
-        } else if (this.selectedPodcast != null) {
-            this.getPlayback().setCurrPodcast(selectedPodcast);
+
+        this.getPlayback().setCurrTrack(selectedTrack);
+        if (selectedTrack.getType() == AudioType.PODCAST) {
+            /* Restore data. */
+            playback.setTimeWatched(((Podcast) selectedTrack).getCurrEpisode().getTimeWatched());
         } else {
-            this.getPlayback().setCurrPlaylist(selectedPlaylist);
+            /* Restore data. */
+            playback.setIndexSong(0);
         }
 
         this.lastSelect = -1;
@@ -362,29 +360,17 @@ public final class MusicPlayer {
             return noLOAD;
         }
 
-        if (this.getPlayback().getCurrSong() != null) {
-            this.getPlayback().setCurrSong(null);
-            this.getPlayback().setPlayPause(false);
-        } else if (this.getPlayback().getCurrPodcast() != null) {
-            this.getPlayback().nextEpisodeinPodcast();
-            if (this.getPlayback().getCurrEpisode() == null) {
-                return noLOAD;
-            } else {
-                return successNEXT + this.getPlayback().getCurrEpisode().getName()
-                        + ".";
-            }
+        /* Play the next track. */
+        getPlayback().getCurrTrack().nextTrack(playback);
+
+        /* Check if their is something still running. */
+        if (getPlayback().getCurrTrack() == null) {
+            return noLOAD;
         } else {
-            this.getPlayback().nextSonginPlaylist();
-            if (this.getPlayback().currPlayingSong() == null) {
-                return noLOAD;
-            } else {
-                this.getPlayback().setPlayPause(true);
-                return successNEXT + this.getPlayback().currPlayingSong().getName()
-                        + ".";
-            }
+            this.getPlayback().setPlayPause(true);
+            return successNEXT + this.getPlayback().getCurrTrack().getTrack(playback) + ".";
         }
 
-        return null;
     }
 
     /**
@@ -400,58 +386,41 @@ public final class MusicPlayer {
             return noLOAD;
         }
 
-        if (this.getPlayback().getCurrSong() != null) {
-            this.getPlayback().setCurrSong(null);
-            this.getPlayback().setPlayPause(false);
-        } else if (this.getPlayback().getCurrPodcast() != null) {
-            this.getPlayback().prevSonginPlaylist();
+        /* Play previous track. */
+        getPlayback().getCurrTrack().prevTrack(playback);
+
+        /* Check if their is something still running. */
+        if (getPlayback().getCurrTrack() == null) {
+            return noLOAD;
         } else {
-            this.getPlayback().prevSonginPlaylist();
-            if (this.getPlayback().currPlayingSong() == null) {
-                return noLOAD;
-            } else {
-                this.getPlayback().setPlayPause(true);
-                return successPREV + this.getPlayback().currPlayingSong().getName()
-                        + ".";
-            }
+            this.getPlayback().setPlayPause(true);
+            return successPREV + this.getPlayback().getCurrTrack().getTrack(playback) + ".";
         }
-        return null;
     }
 
     /**
      * Function that gets top 5 songs by number of likes.
-     * @param library       where to get our songs
+     * @param songs         where to get our songs
      * @param players       all user's players
      * @param outResults    interact with output
      */
-    public static void getTop5Songs(final LibraryInput library,
+    public static void getTop5Songs(final ArrayList<Song> songs,
             final ArrayList<MusicPlayer> players,
             final ArrayNode outResults) {
-        /* create a vector of songs. */
-        Map<SongInput, Integer> nrlikes = new HashMap<>();
-
-        /* create a sorted arraylist. */
-        ArrayList<SongInput> auxSongs = new ArrayList<>();
-
         final int maxTop = 5;
+        /* Create an aux vector of with songs. */
+        ArrayList<Song> auxSongs = new ArrayList<>();
 
-        /* Iterate over all songs and compute # of likes. */
-        for (SongInput song : library.getSongs()) {
-            Integer likes = 0;
+        /* Iterate over all songs and add the to our array. */
+        for (Song song : songs) {
             auxSongs.add(song);
-            for (MusicPlayer player : players) {
-                if (player.getLikedSongs().contains(song)) {
-                    likes++;
-                }
-            }
-            nrlikes.put(song, likes);
         }
 
         /* Sorting by likes comparator. */
-        Comparator<SongInput> songInputComparator = new Comparator<SongInput>() {
+        Comparator<Song> songInputComparator = new Comparator<Song>() {
             @Override
-            public int compare(final SongInput stSong, final SongInput ndSong) {
-                return nrlikes.get(ndSong) - nrlikes.get(stSong);
+            public int compare(final Song stSong, final Song ndSong) {
+                return ndSong.getNrLikes() - stSong.getNrLikes();
             }
         };
 

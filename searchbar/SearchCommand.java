@@ -2,9 +2,9 @@ package searchbar;
 
 import java.util.ArrayList;
 
-import fileio.input.SongInput;
-import musicplayer.Playlist;
-import mydata.PodcastData;
+import mydata.Playlist;
+import mydata.Podcast;
+import mydata.Song;
 
 public class SearchCommand {
     private String type;
@@ -40,8 +40,8 @@ public class SearchCommand {
      */
     public SearchCommand search(final String who,
         final ArrayList<Playlist> createdPlaylists,
-        final ArrayList<SongInput> songs,
-        final ArrayList<PodcastData> podcasts,
+        final ArrayList<Song> songs,
+        final ArrayList<Podcast> podcasts,
         final Filters myfilters) {
         switch (this.type) {
             case "song" -> {
