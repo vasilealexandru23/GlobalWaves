@@ -2,47 +2,60 @@ package fileio.input;
 
 import java.util.ArrayList;
 
-import commands.AddAlbumCommand;
-import commands.AddAnnouncementCommand;
-import commands.AddEventCommand;
-import commands.AddMerchCommand;
-import commands.AddPodcastCommand;
-import commands.AddRemoveInPlaylistCommand;
-import commands.AddUserCommand;
-import commands.BackwardCommand;
-import commands.ChangePageCommand;
-import commands.CommandRunner;
-import commands.CreatePlaylistCommand;
-import commands.DeleteUserCommand;
-import commands.FollowCommand;
-import commands.ForwardCommand;
-import commands.GetAllUsersCommand;
-import commands.GetOnlineUsersCommand;
-import commands.GetTop5AlbumsCommand;
-import commands.GetTop5ArtistsCommand;
-import commands.GetTop5PlaylistsCommand;
-import commands.GetTop5SongsCommand;
-import commands.LikeCommand;
-import commands.LoadCommand;
-import commands.NextCommand;
-import commands.PlayPauseCommand;
-import commands.PrevCommand;
-import commands.PrintCurrentPageCommand;
-import commands.RemoveAlbumCommand;
-import commands.RemoveAnnouncementCommand;
-import commands.RemoveEventCommand;
-import commands.RemovePodcastCommand;
-import commands.RepeatCommand;
-import commands.SearchCommand;
-import commands.SelectCommand;
-import commands.ShowAlbumsCommand;
-import commands.ShowPlaylistsCommand;
-import commands.ShowPodcastCommand;
-import commands.ShowPreferredSongs;
-import commands.ShuffleCommand;
-import commands.StatusCommand;
-import commands.SwitchConnectionStatusCommand;
-import commands.SwitchVisibilityCommand;
+
+import commands.*;
+import commands.ArtistCommands.AddAlbumCommand;
+import commands.ArtistCommands.AddEventCommand;
+import commands.ArtistCommands.RemoveAlbumCommand;
+import commands.ArtistCommands.RemoveEventCommand;
+import commands.ArtistCommands.ShowAlbumsCommand;
+import commands.DatabaseCommands.AddUserCommand;
+import commands.DatabaseCommands.DeleteUserCommand;
+import commands.DatabaseCommands.GetAllUsersCommand;
+import commands.DatabaseCommands.GetOnlineUsersCommand;
+import commands.HostCommands.AddAnnouncementCommand;
+import commands.HostCommands.AddMerchCommand;
+import commands.HostCommands.AddPodcastCommand;
+import commands.HostCommands.RemoveAnnouncementCommand;
+import commands.HostCommands.RemovePodcastCommand;
+import commands.HostCommands.ShowPodcastCommand;
+import commands.MusicPlayerCommands.AdBreakCommand;
+import commands.MusicPlayerCommands.AddRemoveInPlaylistCommand;
+import commands.MusicPlayerCommands.BackwardCommand;
+import commands.MusicPlayerCommands.ForwardCommand;
+import commands.MusicPlayerCommands.LikeCommand;
+import commands.MusicPlayerCommands.LoadCommand;
+import commands.MusicPlayerCommands.LoadRecommendationsCommand;
+import commands.MusicPlayerCommands.NextCommand;
+import commands.MusicPlayerCommands.PlayPauseCommand;
+import commands.MusicPlayerCommands.PrevCommand;
+import commands.MusicPlayerCommands.RepeatCommand;
+import commands.MusicPlayerCommands.SearchCommand;
+import commands.MusicPlayerCommands.SelectCommand;
+import commands.MusicPlayerCommands.ShowPlaylistsCommand;
+import commands.MusicPlayerCommands.ShuffleCommand;
+import commands.MusicPlayerCommands.StatusCommand;
+import commands.MusicPlayerCommands.SwitchVisibilityCommand;
+import commands.Statistics.GetTop5AlbumsCommand;
+import commands.Statistics.GetTop5ArtistsCommand;
+import commands.Statistics.GetTop5PlaylistsCommand;
+import commands.Statistics.GetTop5SongsCommand;
+import commands.Statistics.WrappedCommand;
+import commands.UserCommands.BuyMerchCommand;
+import commands.UserCommands.BuyPremiumCommand;
+import commands.UserCommands.CancelPremiumCommand;
+import commands.UserCommands.ChangePageCommand;
+import commands.UserCommands.CreatePlaylistCommand;
+import commands.UserCommands.FollowCommand;
+import commands.UserCommands.GetNotifications;
+import commands.UserCommands.NextPageCommand;
+import commands.UserCommands.PreviousPageCommand;
+import commands.UserCommands.PrintCurrentPageCommand;
+import commands.UserCommands.SeeMerchCommand;
+import commands.UserCommands.ShowPreferredSongs;
+import commands.UserCommands.SubscribeCommand;
+import commands.UserCommands.SwitchConnectionStatusCommand;
+import commands.UserCommands.UpdateRecommendationsCommand;
 import database.Episode;
 import database.Song;
 import lombok.Getter;
@@ -99,6 +112,10 @@ public final class CommandInput {
     @Getter
     private String nextPage;
 
+    /* For recommendations. */
+    @Getter
+    private String recommendationType;
+
     public void setName(final String name) {
         this.name = name;
     }
@@ -123,6 +140,10 @@ public final class CommandInput {
         this.nextPage = nextPage;
     }
 
+    public void setRecommendationType(final String recommendationType) {
+        this.recommendationType = recommendationType;
+    }
+
     public CommandInput() {
     }
 
@@ -135,95 +156,118 @@ public final class CommandInput {
      */
     public void constructCommand() {
         switch (command) {
-            case "search" -> {
+            case "search" ->
                 commands.add(new SearchCommand(command, username, searchcmd,
                         timestamp, type, filters));
-            } case "select" -> {
+            case "select" ->
                 commands.add(new SelectCommand(command, username, timestamp, itemNumber));
-            } case "load" -> {
+            case "load" ->
                 commands.add(new LoadCommand(command, username, timestamp));
-            } case "status" -> {
+            case "status" ->
                 commands.add(new StatusCommand(command, username, timestamp));
-            } case "playPause" -> {
+            case "playPause" ->
                 commands.add(new PlayPauseCommand(command, username, timestamp));
-            } case "createPlaylist" -> {
+            case "createPlaylist" ->
                 commands.add(new CreatePlaylistCommand(command, username, timestamp, playlistName));
-            } case "addRemoveInPlaylist" -> {
+            case "addRemoveInPlaylist" ->
                 commands.add(new AddRemoveInPlaylistCommand(command, username,
                     timestamp, playlistId));
-            } case "like" -> {
+            case "like" ->
                 commands.add(new LikeCommand(command, username, timestamp));
-            } case "showPlaylists" -> {
+            case "showPlaylists" ->
                 commands.add(new ShowPlaylistsCommand(command, username, timestamp));
-            } case "showPreferredSongs" -> {
+            case "showPreferredSongs" ->
                 commands.add(new ShowPreferredSongs(command, username, timestamp));
-            } case "follow" -> {
+            case "follow" ->
                 commands.add(new FollowCommand(command, username, timestamp));
-            } case "getTop5Songs" -> {
+            case "getTop5Songs" ->
                 commands.add(new GetTop5SongsCommand(command, username, timestamp));
-            } case "getTop5Playlists" -> {
+            case "getTop5Playlists" ->
                 commands.add(new GetTop5PlaylistsCommand(command, username, timestamp));
-            } case "repeat" -> {
+            case "repeat" ->
                 commands.add(new RepeatCommand(command, username, timestamp));
-            } case "shuffle" -> {
+            case "shuffle" ->
                 commands.add(new ShuffleCommand(command, username, timestamp, seed));
-            } case "forward" -> {
+            case "forward" ->
                 commands.add(new ForwardCommand(command, username, timestamp));
-            } case "backward" -> {
+            case "backward" ->
                 commands.add(new BackwardCommand(command, username, timestamp));
-            } case "next" -> {
+            case "next" ->
                 commands.add(new NextCommand(command, username, timestamp));
-            } case "prev" -> {
+            case "prev" ->
                 commands.add(new PrevCommand(command, username, timestamp));
-            } case "switchVisibility" -> {
+            case "switchVisibility" ->
                 commands.add(new SwitchVisibilityCommand(command, username, timestamp, playlistId));
-            } case "addUser" -> {
+            case "addUser" ->
                 commands.add(new AddUserCommand(command, username, timestamp, age, city, type));
-            } case "deleteUser" -> {
+            case "deleteUser" ->
                 commands.add(new DeleteUserCommand(command, username, timestamp));
-            } case "switchConnectionStatus" -> {
+            case "switchConnectionStatus" ->
                 commands.add(new SwitchConnectionStatusCommand(command, username, timestamp));
-            } case "addAlbum" -> {
+            case "addAlbum" ->
                 commands.add(new AddAlbumCommand(command, username, timestamp, name,
                         releaseYear, description, songs));
-            } case "removeAlbum" -> {
+            case "removeAlbum" ->
                 commands.add(new RemoveAlbumCommand(command, username, timestamp, name));
-            } case "showAlbums" -> {
+            case "showAlbums" ->
                 commands.add(new ShowAlbumsCommand(command, username, timestamp));
-            } case "printCurrentPage" -> {
+            case "printCurrentPage" ->
                 commands.add(new PrintCurrentPageCommand(command, username, timestamp));
-            } case "addEvent" -> {
+            case "addEvent" ->
                 commands.add(new AddEventCommand(command, username, timestamp,
                         date, name, description));
-            } case "removeEvent" -> {
+            case "removeEvent" ->
                 commands.add(new RemoveEventCommand(command, username, timestamp, name));
-            } case "addMerch" -> {
+            case "addMerch" ->
                 commands.add(new AddMerchCommand(command, username, timestamp,
                         price, name, description));
-            } case "addPodcast" -> {
+            case "addPodcast" ->
                 commands.add(new AddPodcastCommand(command, username, timestamp, name, episodes));
-            } case "removePodcast" -> {
+            case "removePodcast" ->
                 commands.add(new RemovePodcastCommand(command, username, timestamp, name));
-            } case "showPodcasts" -> {
+            case "showPodcasts" ->
                 commands.add(new ShowPodcastCommand(command, username, timestamp));
-            } case "addAnnouncement" -> {
+            case "addAnnouncement" ->
                 commands.add(new AddAnnouncementCommand(command, username, timestamp,
                         name, description));
-            } case "removeAnnouncement" -> {
+            case "removeAnnouncement" ->
                 commands.add(new RemoveAnnouncementCommand(command, username, timestamp, name));
-            } case "changePage" -> {
+            case "changePage" ->
                 commands.add(new ChangePageCommand(command, username, timestamp, nextPage));
-            } case "getTop5Albums" -> {
+            case "getTop5Albums" ->
                 commands.add(new GetTop5AlbumsCommand(command, username, timestamp));
-            } case "getTop5Artists" -> {
+            case "getTop5Artists" ->
                 commands.add(new GetTop5ArtistsCommand(command, username, timestamp));
-            } case "getAllUsers" -> {
+            case "getAllUsers" ->
                 commands.add(new GetAllUsersCommand(command, username, timestamp));
-            } case "getOnlineUsers" -> {
+            case "getOnlineUsers" ->
                 commands.add(new GetOnlineUsersCommand(command, username, timestamp));
-            } default -> {
-                System.out.println("Command not found.");
-            }
+            case "wrapped" ->
+                commands.add(new WrappedCommand(command, username, timestamp));
+            case "buyPremium" ->
+                commands.add(new BuyPremiumCommand(command, username, timestamp));
+            case "cancelPremium" ->
+                commands.add(new CancelPremiumCommand(command, username, timestamp));
+            case "getNotifications" ->
+                commands.add(new GetNotifications(command, username, timestamp));
+            case "subscribe" ->
+                commands.add(new SubscribeCommand(command, username, timestamp));
+            case "buyMerch" ->
+                commands.add(new BuyMerchCommand(command, username, timestamp, name));
+            case "seeMerch" ->
+                commands.add(new SeeMerchCommand(command, username, timestamp));
+            case "updateRecommendations" ->
+                commands.add(new UpdateRecommendationsCommand(command, username,
+                        timestamp, recommendationType));
+            case "previousPage" ->
+                commands.add(new PreviousPageCommand(command, username, timestamp));
+            case "nextPage" ->
+                commands.add(new NextPageCommand(command, username, timestamp));
+            case "adBreak" ->
+                commands.add(new AdBreakCommand(command, username, timestamp, price));
+            case "loadRecommendations" ->
+                commands.add(new LoadRecommendationsCommand(command, username, timestamp));
+            default -> System.out.println("Command not found.");
         }
     }
 
@@ -268,30 +312,32 @@ public final class CommandInput {
      * @param type
      */
     public void setType(final String type) {
-        if (type.equals("song")) {
-            if (searchcmd == null) {
-                this.searchcmd = new SearchSong();
-            }
-        } else if (type.equals("podcast")) {
-            if (searchcmd == null) {
-                this.searchcmd = new SearchPodcast();
-            }
-        } else if (type.equals("playlist")) {
-            if (searchcmd == null) {
-                this.searchcmd = new SearchPlaylist();
-            }
-        } else if (type.equals("artist")) {
-            if (searchcmd == null) {
-                this.searchcmd = new SearchArtist();
-            }
-        } else if (type.equals("album")) {
-            if (searchcmd == null) {
-                this.searchcmd = new SearchAlbum();
-            }
-        } else if (type.equals("host")) {
-            if (searchcmd == null) {
-                this.searchcmd = new SearchHost();
-            }
+        switch (type) {
+            case "song":
+                if (searchcmd == null) {
+                    this.searchcmd = new SearchSong();
+                }
+            case "podcast":
+                if (searchcmd == null) {
+                    this.searchcmd = new SearchPodcast();
+                }
+            case "playlist":
+                if (searchcmd == null) {
+                    this.searchcmd = new SearchPlaylist();
+                }
+            case "artist":
+                if (searchcmd == null) {
+                    this.searchcmd = new SearchArtist();
+                }
+            case "album":
+                if (searchcmd == null) {
+                    this.searchcmd = new SearchAlbum();
+                }
+            case "host":
+                if (searchcmd == null) {
+                    this.searchcmd = new SearchHost();
+                }
+            default :
         }
 
         this.type = type;

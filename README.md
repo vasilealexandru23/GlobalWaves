@@ -1,6 +1,6 @@
 Copyright 2022 Vasile Alexandru-Gabriel (alexandru.vasile03@stud.acs.upb.ro)
 
-# GlobalWaves - Audio Player - Project II
+# GlobalWaves - Audio Player - Project III
 
 ## Design Patterns
 1. `Singleton Pattern`   
@@ -14,6 +14,14 @@ It is used in `commands/` where we have a common inteface to implement and a sup
 3. `Template Pattern`     
 This pattern was used in the class `pages/UserPage`. Because in the next stage of project   
 we might display more content of a user this pattern is convenient for later implementation of some methods.
+
+4. `Strategy Pattern`   
+This pattern was used in the class `recommendations/`. Because the platform can perform    
+different types of recommendations for a specific user, to handle it easily, Strategy pattern was obvious.
+
+5. `Observer Pattern`
+This pattern was used in the class `notifications/`. Because subscriber notifications    
+depend on the artist or host they've subscribed to, to easily update every notifications, Observer pattern was best for it.
 
 ## Structure Of The Project
   * `Commands/` - Directory that contains all possible commands a user can request from platform and their action.
@@ -48,6 +56,8 @@ we might display more content of a user this pattern is convenient for later imp
     * `UserTypes` - General abstract class used to define all types of users.
     * `UserArtist` - Subclass that defines an artist with specific fields and methods.
     * `UserNormal` - Subclass that defines a normal user with specific fields and methods.
+  * `recommendations/` - Directory that contains Strategy Design Pattern in implementing recommendations.
+  * `notifications` - Directory that contains Observer Design Pattern in implementing notifications for a normal user.
  
 ## Program Flow
 
@@ -67,5 +77,9 @@ for the corresponding user's request about it's current playing track in musicpl
 For `Page.java` implementation we create through inheritance specific subclasses for    
 all types of users(artists, hosts, normalUsers) with fields pointing to each user's fields for    
 instant updates about each user's data.
+
+To handle all the required statistics, recommendations and ad breaks, I added a queue in the   
+musicplayer to easily insert the ad and for each normal user I added some fields for all his types
+of history.
 
 **NOTE: For more details about implementation check JavaDoc.**

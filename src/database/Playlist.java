@@ -301,11 +301,6 @@ public final class Playlist extends AudioCollection {
         }
     }
 
-    @Override
-    public void checkTrack(final Playback playback) {
-        this.checkCurrentSong(playback);
-    }
-
     /**
      * Function that checks current playing song in playlist.
      */
@@ -319,7 +314,7 @@ public final class Playlist extends AudioCollection {
             playback.setTimeWatched(updateTimeWatched);
             if (!playback.isShuffle()) {
                 while (playback.getTimeWatched()
-                        > this.getSongs().get(playback.getIndexSong()).getDuration()) {
+                        >= this.getSongs().get(playback.getIndexSong()).getDuration()) {
                     updateTimeWatched = playback.getTimeWatched()
                             - this.getSongs().get(playback.getIndexSong()).getDuration();
                     playback.setTimeWatched(updateTimeWatched);
@@ -333,7 +328,7 @@ public final class Playlist extends AudioCollection {
                 }
             } else {
                 while (playback.getTimeWatched()
-                        > shuffledPlaylist.get(playback.getIndexSongShuffled()).getDuration()) {
+                        >= shuffledPlaylist.get(playback.getIndexSongShuffled()).getDuration()) {
                     updateTimeWatched = playback.getTimeWatched()
                             - shuffledPlaylist.get(playback.getIndexSongShuffled()).getDuration();
                     playback.setTimeWatched(updateTimeWatched);
@@ -471,5 +466,14 @@ public final class Playlist extends AudioCollection {
     }
 
         playback.setLastInteracted(MusicPlayer.getTimestamp());
+    }
+
+    @Override
+    public void updatePlays(final Playback playback) {
+        if (playback.getIndexSong() == this.getSongs().size()) {
+            return;
+        }
+
+        currPlayingSong(playback).updatePlays(playback);
     }
 }

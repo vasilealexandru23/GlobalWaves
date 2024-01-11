@@ -4,8 +4,8 @@ import java.util.ArrayList;
 
 import fileio.input.SongInput;
 import musicplayer.AudioCollection;
-import musicplayer.MusicPlayer;
 import musicplayer.Playback;
+import users.UserNormal;
 
 public final class Song extends AudioCollection {
     private String name;
@@ -16,6 +16,17 @@ public final class Song extends AudioCollection {
     private String genre;
     private Integer releaseYear;
     private String artist;
+
+    /* Field for add. */
+    private int price;
+
+    public int getPrice() {
+        return price;
+    }
+
+    public void setPrice(final int price) {
+        this.price = price;
+    }
 
     private int nrLikes;
 
@@ -32,6 +43,28 @@ public final class Song extends AudioCollection {
         this.releaseYear = song.getReleaseYear();
         this.artist = song.getArtist();
         this.nrLikes = 0;
+        this.price = 0;
+        setType(AudioType.SONG);
+    }
+
+    /**
+     * Function that duplicates a song.
+     * @return          return the new song
+     */
+    public Song dupSong() {
+        Song newSong = new Song();
+        newSong.name = this.name;
+        newSong.duration = this.duration;
+        newSong.album = this.album;
+        newSong.tags = this.tags;
+        newSong.lyrics = this.lyrics;
+        newSong.genre = this.genre;
+        newSong.releaseYear = this.releaseYear;
+        newSong.artist = this.artist;
+        newSong.nrLikes = this.nrLikes;
+        setType(AudioType.SONG);
+
+        return newSong;
     }
 
     public String getName() {
@@ -126,56 +159,12 @@ public final class Song extends AudioCollection {
     }
 
     @Override
-    public void checkTrack(final Playback playback) {
-        this.checkSong(playback);
-    }
-
-    /**
-     * Function that checks if a song is running.
-     * @param playback      current playback
-     * @return              true if a song is running, false otherwise
-     */
-    public boolean checkSong(final Playback playback) {
-        /* Check if playback is currently playing. */
-        if (playback.isPlayPause() && !playback.isStopped()) {
-            Integer updateTimeWatched = playback.getTimeWatched()
-                    + MusicPlayer.getTimestamp() - playback.getLastInteract();
-            playback.setTimeWatched(updateTimeWatched);
-            playback.setLastInteracted(MusicPlayer.getTimestamp());
-            while (playback.getRepeat() != 0 && playback.getTimeWatched() > duration) {
-                if (playback.getRepeat() != 0) {
-                    playback.setTimeWatched(playback.getTimeWatched() - duration);
-                    if (playback.getRepeat() == 1) {
-                        playback.setRepeat(0);
-                    }
-                }
-            }
-            if (playback.getTimeWatched() > duration) {
-                playback.setCurrTrack(null);
-                playback.setPlayPause(false);
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
     public int getTimeRemained(final Playback playback) {
-        if (!checkSong(playback)) {
-            playback.setPlayPause(false);
-            return 0;
-        }
-
         return duration - playback.getTimeWatched();
     }
 
     @Override
     public String getTrack(final Playback playback) {
-        /* Request update from playback. */
-        if (!checkSong(playback)) {
-            return "";
-        }
-
         return name;
     }
 
@@ -189,5 +178,12 @@ public final class Song extends AudioCollection {
     public void prevTrack(final Playback playback) {
         playback.setPlayPause(false);
         playback.setCurrTrack(null);
+    }
+
+    @Override
+    public void updatePlays(final Playback playback) {
+        UserNormal user = MyDatabase.getInstance().getUserWithPlayback(playback);
+        user.addToHistory(this);
+        this.plays++;
     }
 }

@@ -21,6 +21,9 @@ public final class Podcast extends AudioCollection {
         this.name = name;
         this.owner = owner;
         this.episodes = episodes;
+        for (Episode episode : episodes) {
+            episode.setOwner(owner);
+        }
         indexEpisode = 0;
     }
 
@@ -77,44 +80,7 @@ public final class Podcast extends AudioCollection {
     }
 
     @Override
-    public void checkTrack(final Playback playback) {
-        this.checkCurrentEpisode(playback);
-    }
-
-    /**
-     * Function that checks the current episode in timeline.
-     * @param playback      current playback
-     */
-    public void checkCurrentEpisode(final Playback playback) {
-        if (this.getCurrEpisode() == null) {
-            return;
-        }
-        if (this.indexEpisode == this.episodes.size()) {
-            return;
-        }
-        if (playback.isPlayPause() && !playback.isStopped()) {
-            Integer updateTimeWatched = playback.getTimeWatched()
-                    + MusicPlayer.getTimestamp() - playback.getLastInteract();
-            playback.setTimeWatched(updateTimeWatched);
-            while (playback.getTimeWatched() > this.getCurrEpisode().getDuration()) {
-                updateTimeWatched = playback.getTimeWatched()
-                        - this.getCurrEpisode().getDuration();
-                playback.setTimeWatched(updateTimeWatched);
-                this.goToNextEpisode(playback);
-                if (this.getCurrEpisode() == null) {
-                    playback.setCurrTrack(null);
-                    playback.setPlayPause(false);
-                    return;
-                }
-            }
-            updatePodcastData(playback);
-            playback.setLastInteracted(MusicPlayer.getTimestamp());
-        }
-    }
-
-    @Override
     public void nextTrack(final Playback playback) {
-        this.checkCurrentEpisode(playback);
         this.goToNextEpisode(playback);
 
         playback.setTimeWatched(0);
@@ -146,8 +112,8 @@ public final class Podcast extends AudioCollection {
 
     @Override
     public int getTimeRemained(final Playback playback) {
-        this.checkCurrentEpisode(playback);
-        return this.getCurrEpisode().getDuration() - playback.getTimeWatched();
+        return playback.getQueueEpisodes().get(playback.getIndexInQueue()).getDuration()
+                - playback.getTimeWatched();
     }
 
     /**
@@ -157,11 +123,10 @@ public final class Podcast extends AudioCollection {
      */
     public String getTrack(final Playback playback) {
         /* Request update from playback. */
-        this.checkCurrentEpisode(playback);
-        if (this.getCurrEpisode() == null) {
+        if (playback.getCurrTrack() == null) {
             return "";
         }
-        return this.getCurrEpisode().getName();
+        return playback.getQueueEpisodes().get(playback.getIndexInQueue()).getName();
     }
 
      /**
@@ -191,7 +156,6 @@ public final class Podcast extends AudioCollection {
     public String backward(final Playback playback) {
         String successBACKWARD = "Rewound successfully.";
         final int backwardTime = 90;
-        checkCurrentEpisode(playback);
         if (playback.getTimeWatched() >= backwardTime) {
             playback.setTimeWatched(playback.getTimeWatched() - backwardTime);
         } else {
@@ -200,5 +164,10 @@ public final class Podcast extends AudioCollection {
         updatePodcastData(playback);
         playback.setLastInteracted(MusicPlayer.getTimestamp());
         return successBACKWARD;
+    }
+
+    @Override
+    public void updatePlays(final Playback playback) {
+        getCurrEpisode().updatePlays(playback);
     }
 }

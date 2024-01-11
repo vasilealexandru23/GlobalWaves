@@ -4,8 +4,11 @@ import java.util.ArrayList;
 
 import database.Album;
 import lombok.Getter;
+import users.UserArtist;
+import users.UserNormal;
 
 public final class ArtistPage extends UserPage {
+    private final UserArtist artist;
     public final class Event {
         @Getter
         private String name;
@@ -67,7 +70,8 @@ public final class ArtistPage extends UserPage {
     @Getter
     private ArrayList<Album> albums;
 
-    public ArtistPage(final ArrayList<Album> albums) {
+    public ArtistPage(final UserArtist artist, final ArrayList<Album> albums) {
+        this.artist = artist;
         this.albums = albums;
     }
 
@@ -118,5 +122,34 @@ public final class ArtistPage extends UserPage {
 
         result += "]";
         return result;
+    }
+
+    @Override
+    public String buyMerch(final UserNormal buyer, final String merchName) {
+        for (Merch merch : merchs) {
+            if (merch.getName().equals(merchName)) {
+                artist.newPurchase(buyer, merch);
+                return buyer.getUsername()
+                        + " has added new merch successfully.";
+            }
+        }
+
+        return "The merch " + merchName + " doesn't exist.";
+    }
+
+    @Override
+    public String subscribe(final UserNormal user) {
+        if (artist.getSubscribers().contains(user)) {
+            artist.getSubscribers().remove(user);
+            return user.getUsername()
+                    + " unsubscribed from "
+                    + artist.getUsername()
+                    + " successfully.";
+        }
+        artist.getSubscribers().add(user);
+        return user.getUsername()
+                + " subscribed to "
+                + artist.getUsername()
+                + " successfully.";
     }
 }

@@ -24,22 +24,22 @@ public final class SearchAlbum extends Search {
 
         for (Album album : albums) {
             /* Check name of album. */
-            boolean goalalbum = album.getName() == null || myfilters.getName() == null
+            boolean goalAlbum = album.getName() == null || myfilters.getName() == null
                     || album.getName().startsWith(myfilters.getName());
 
             /* Check album by artist. */
             if (album.getOwner() != null && myfilters.getOwner() != null
                 && !album.getOwner().equals(myfilters.getOwner())) {
-                goalalbum = false;
+                goalAlbum = false;
             }
 
             /* Check album by description. */
             if (album.getDescription() != null && myfilters.getDescription() != null
                 && !album.getDescription().contains(myfilters.getDescription())) {
-                goalalbum = false;
+                goalAlbum = false;
             }
 
-            if (goalalbum) {
+            if (goalAlbum) {
                 results.add(album);
                 if (results.size() == maxSearch) {
                     break;

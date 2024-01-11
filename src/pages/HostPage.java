@@ -6,17 +6,21 @@ import database.Episode;
 import database.Podcast;
 import lombok.Getter;
 import users.UserHost.Announcement;
+import users.UserHost;
+import users.UserNormal;
 
 public final class HostPage extends UserPage {
+    private final UserHost host;
     @Getter
     private ArrayList<Podcast> podcasts;
     @Getter
     private ArrayList<Announcement> announcements = new ArrayList<>();
 
-    public HostPage(final ArrayList<Podcast> podcasts,
+    public HostPage(final UserHost host, final ArrayList<Podcast> podcasts,
         final ArrayList<Announcement> announcements) {
         this.podcasts = podcasts;
         this.announcements = announcements;
+        this.host = host;
     }
 
     /**
@@ -55,8 +59,24 @@ public final class HostPage extends UserPage {
             firstAnnouncement = false;
         }
 
-        result += "\n]";
+        result += "]";
 
         return result;
+    }
+
+    @Override
+    public String subscribe(final UserNormal user) {
+        if (host.getSubscribers().contains(user)) {
+            host.getSubscribers().remove(user);
+            return user.getUsername()
+                    + " unsubscribed from "
+                    + host.getUsername()
+                    + " successfully.";
+        }
+        host.getSubscribers().add(user);
+        return user.getUsername()
+                + " subscribed to "
+                + host.getUsername()
+                + " successfully.";
     }
 }

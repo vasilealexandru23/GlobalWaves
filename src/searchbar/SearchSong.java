@@ -25,7 +25,7 @@ public final class SearchSong extends Search {
         for (Song song : songs) {
             /* Check name of song. */
             boolean goalsong = song.getName() == null || myfilters.getName() == null
-                    || song.getName().startsWith(myfilters.getName());
+                    || song.getName().toLowerCase().startsWith((myfilters.getName().toLowerCase()));
 
             /* Check album of song. */
             if (song.getAlbum() != null && myfilters.getAlbum() != null
@@ -85,7 +85,6 @@ public final class SearchSong extends Search {
                     break;
                 }
             }
-
         }
     }
 

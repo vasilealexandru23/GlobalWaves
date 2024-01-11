@@ -5,8 +5,8 @@ import musicplayer.AudioCollection.AudioType;
 import users.UserNormal;
 
 import java.util.ArrayList;
-
 import database.Album;
+
 import database.Playlist;
 import database.Podcast;
 import database.Song;
@@ -202,7 +202,7 @@ public final class MusicPlayer {
         Song currSong;
 
         if (selectedTrack.getType() == AudioType.SONG) {
-            currSong = (Song) selectedTrack;
+            currSong = (Song) (this.getPlayback().getCurrTrack());
         } else if (selectedTrack.getType() == AudioType.PLAYLIST) {
             currSong = ((Playlist) (this.getPlayback().getCurrTrack())).currPlayingSong(playback);
         } else {

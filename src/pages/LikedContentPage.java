@@ -3,6 +3,7 @@ package pages;
 import database.Playlist;
 import database.Song;
 import musicplayer.MusicPlayer;
+import users.UserNormal;
 
 public final class LikedContentPage extends UserPage {
     private MusicPlayer musicPlayer;
@@ -43,5 +44,10 @@ public final class LikedContentPage extends UserPage {
         result += "]";
 
         return result;
+    }
+
+    @Override
+    public String subscribe(final UserNormal user) {
+        return "You can subscribe only to artists and hosts.";
     }
 }

@@ -3,6 +3,7 @@ package main;
 import checker.Checker;
 import checker.CheckerConstants;
 import commands.CommandRunner;
+import commands.Statistics.EndProgramCommand;
 import database.MyDatabase;
 import fileio.input.CommandInput;
 import fileio.input.LibraryInput;
@@ -80,7 +81,6 @@ public final class Main {
         LibraryInput.setLibraryPath(LIBRARY_PATH);
         LibraryInput library = LibraryInput.getInstance();
 
-
         /* Read commands and transfer input classes in data classes. */
         CommandInput[] commands = objectMapper.readValue(new File("input/" + filePathInput),
                 CommandInput[].class);
@@ -93,6 +93,7 @@ public final class Main {
         for (CommandInput command : commands) {
             command.constructCommand();
         }
+        CommandInput.getCommands().add(new EndProgramCommand("endProgram"));
 
         /* Create output. */
         ArrayNode outputs = objectMapper.createArrayNode();

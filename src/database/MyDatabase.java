@@ -3,6 +3,11 @@ package database;
 import lombok.Getter;
 import musicplayer.AudioCollection;
 import musicplayer.MusicPlayer;
+import musicplayer.Playback;
+import recommendations.FansPlaylistConcrete;
+import recommendations.RandomPlaylistConcrete;
+import recommendations.RandomSongConcrete;
+import recommendations.RecommendationStrategy;
 import users.UserArtist;
 import users.UserHost;
 import users.UserNormal;
@@ -13,6 +18,7 @@ import java.util.Comparator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import fileio.input.EpisodeInput;
 import fileio.input.LibraryInput;
@@ -36,6 +42,8 @@ public final class MyDatabase {
 
     private final ArrayList<Album> allAlbumsCreated = new ArrayList<Album>();
 
+    private final ArrayList<Song> deletedSongs = new ArrayList<Song>();
+
     private void initDataBase() {
         /* Add all podcasts with their episodes. */
         for (PodcastInput podcast : library.getPodcasts()) {
@@ -44,7 +52,7 @@ public final class MyDatabase {
             ArrayList<Episode> episodes = new ArrayList<Episode>();
             for (EpisodeInput episode : podcast.getEpisodes()) {
                 Episode newEpisode = new Episode(episode.getName(), episode.getDuration(),
-                        episode.getDescription());
+                        episode.getDescription(), podcast.getOwner());
                 episodes.add(newEpisode);
             }
             newPodcast.setEpisodes(episodes);
@@ -108,7 +116,7 @@ public final class MyDatabase {
         newPodcast.setEpisodes(new ArrayList<Episode>());
         for (Episode episode : podcast.getEpisodes()) {
             Episode newEpisode = new Episode(episode.getName(), episode.getDuration(),
-                    episode.getDescription());
+                    episode.getDescription(), podcast.getOwner());
             newPodcast.getEpisodes().add(newEpisode);
         }
 
@@ -160,6 +168,7 @@ public final class MyDatabase {
         UserTypes newUser = null;
         if (type.equals("user")) {
             newUser = new UserNormal(username, age, city);
+            ((UserNormal) newUser).getMusicPlayer().setPodcasts(dupPodcasts());
         } else if (type.equals("artist")) {
             newUser = new UserArtist(username, age, city);
         } else if (type.equals("host")) {
@@ -491,7 +500,7 @@ public final class MyDatabase {
         }
 
         Album newAlbum = new Album(name, username, relaseYear, description, songs);
-        ((UserArtist) toFind).getAlbums().add(newAlbum);
+        ((UserArtist) toFind).addAlbum(newAlbum);
         allAlbumsCreated.add(newAlbum);
 
         /* Add the music from artist in database. */
@@ -803,7 +812,6 @@ public final class MyDatabase {
                     continue;
                 }
 
-                normalUser.getMusicPlayer().getPlayback().checkPlayback();
                 AudioCollection currTrack =
                     normalUser.getMusicPlayer().getPlayback().getCurrTrack();
 
@@ -811,26 +819,10 @@ public final class MyDatabase {
                     continue;
                 }
 
-                if (currTrack.getType() == AudioCollection.AudioType.ALBUM) {
-                    Album currAlbum = (Album) currTrack;
-                    if (currAlbum.getOwner().equals(albumToFind.getOwner())) {
-                        return username + " can't delete this album.";
-                    }
-                }
-
                 if (currTrack.getType() == AudioCollection.AudioType.SONG) {
                     Song currSong = (Song) currTrack;
-                    if (currSong.getOwner().equals(albumToFind.getOwner())) {
+                    if (currSong.getAlbum().equals(name)) {
                         return username + " can't delete this album.";
-                    }
-                }
-
-                if (currTrack.getType() == AudioCollection.AudioType.PLAYLIST) {
-                    Playlist currPlaylist = (Playlist) currTrack;
-                    for (Song song : currPlaylist.getSongs()) {
-                        if (song.getOwner().equals(albumToFind.getOwner())) {
-                            return username + " can't delete this album.";
-                        }
                     }
                 }
 
@@ -846,6 +838,7 @@ public final class MyDatabase {
 
         /* Remove songs from album from database. */
         for (Song song : albumToFind.getSongs()) {
+            deletedSongs.add(song);
             allSongsCreated.remove(song);
         }
 
@@ -897,12 +890,10 @@ public final class MyDatabase {
             }
         });
 
-        for (Album album : allAlbums) {
-            output.add(album.getName());
-            if (output.size() == maxResult) {
-                break;
-            }
-        }
+        allAlbums.stream()
+            .map(Album::getName)
+            .limit(maxResult)
+            .forEach(output::add);
 
         return output;
     }
@@ -938,13 +929,344 @@ public final class MyDatabase {
             }
         });
 
-        for (UserArtist artist : allArtists) {
-            output.add(artist.getUsername());
-            if (output.size() == maxResult) {
-                break;
+        allArtists.stream()
+            .map(UserArtist::getUsername)
+            .limit(maxResult)
+            .forEach(output::add);
+
+        return output;
+    }
+
+    /**
+     * Function that return all plays of a song.
+     * @param song      song to be searched
+     * @return          number of plays
+     */
+    public int getAllPlays(final Song song) {
+        int plays = 0;
+        for (Song iterSong : allSongsCreated) {
+            if (iterSong.getName().equals(song.getName())
+                && iterSong.getArtist().equals(song.getArtist())) {
+                plays += iterSong.getPlays();
             }
         }
 
+        for (Song iterSong : deletedSongs) {
+            if (iterSong.getName().equals(song.getName())
+                && iterSong.getArtist().equals(song.getArtist())) {
+                plays += iterSong.getPlays();
+            }
+        }
+        return plays;
+    }
+
+    /**
+     * Function that updates the state of all users.
+     */
+    private void updateAllUsersStatus() {
+        for (UserTypes user : allUsersCreated) {
+            if (user.getUserType() == UserTypes.UserType.USER) {
+                UserNormal normalUser = (UserNormal) user;
+                if (normalUser.getMusicPlayer().getPlayback() == null) {
+                    continue;
+                }
+                normalUser.getMusicPlayer().getPlayback().checkPlayback();
+            }
+        }
+    }
+
+    /**
+     * Returns the statistics of a user.
+     * @param username      username of the user
+     * @return              the statistics of the user
+     */
+    public ObjectNode getStatistics(final String username) {
+        /* For all users, update their state of player. */
+        updateAllUsersStatus();
+        return findMyUser(username).getStatistics();
+    }
+
+    /**
+     * Function that buys a merch for a user.
+     * @param username          username of the user
+     * @param merchName         name of the merch
+     * @return                  status of the command
+     */
+    public String buyMerch(final String username, final String merchName) {
+        UserNormal toFind = (UserNormal) findMyUser(username);
+
+        if (toFind == null) {
+            return "The username " + username + " doesn't exist.";
+        }
+
+        return toFind.buyMerch(merchName);
+    }
+
+    /**
+     * Function that changes user's account to premium.
+     * @param username          username of the user
+     * @return                  status of the command
+     */
+    public String buyPremium(final String username) {
+        UserNormal toFind = (UserNormal) findMyUser(username);
+        if (toFind == null) {
+            return "The username " + username + " doesn't exist.";
+        }
+
+        if (toFind.isPremium()) {
+            return username + " is already a premium user.";
+        }
+
+        if (toFind.getMusicPlayer().getPlayback() != null) {
+            toFind.getMusicPlayer().getPlayback().checkPlayback();
+        }
+
+        toFind.setPremium(true);
+
+        return username + " bought the subscription successfully.";
+    }
+
+    /**
+     * Function that cancels user's premium account.
+     * @param username          username of the user
+     * @return                  status of the command
+     */
+    public String cancelPremium(final String username) {
+        UserNormal toFind = (UserNormal) findMyUser(username);
+        if (toFind == null) {
+            return "The username " + username + " doesn't exist.";
+        }
+
+        if (!toFind.isPremium()) {
+            return username + " is not a premium user.";
+        }
+
+        if (toFind.getMusicPlayer().getPlayback() != null) {
+            toFind.getMusicPlayer().getPlayback().checkPlayback();
+        }
+
+        toFind.setPremium(false);
+
+        /* Pay every artist listened. */
+        toFind.payPremium();
+
+        /* Clear premium history. */
+        for (Song song : toFind.getHistorySongsPremium()) {
+            toFind.getAllSongsPlayed().add(song);
+        }
+        toFind.getHistorySongsPremium().clear();
+
+        return username + " cancelled the subscription successfully.";
+    }
+
+    /**
+     * Function that returns all merches bought by a user.
+     * @param username          username of the user
+     * @return                  all merches bought by a user
+     */
+    public ArrayNode seeMerch(final String username) {
+        UserNormal toFind = (UserNormal) findMyUser(username);
+        return toFind.seeMerch();
+    }
+
+    /**
+     * Function that distributes the money to artists.
+     */
+    private void distributeMoney() {
+        for (UserTypes user : allUsersCreated) {
+            if (user.getUserType() == UserTypes.UserType.USER) {
+                UserNormal myUser = (UserNormal) user;
+                if (myUser.isPremium()) {
+                    myUser.payPremium();
+                }
+                myUser.payFreeAccount();
+            }
+        }
+    }
+
+    /**
+     * Function that returns the statistics of all artists.
+     * @return                  the statistics of all artists
+     */
+    public ObjectNode statsArtist() {
+        ObjectNode output = new ObjectMapper().createObjectNode();
+
+        updateAllUsersStatus();
+        distributeMoney();
+
+        ArrayList<UserArtist> allArtists = new ArrayList<>();
+        for (UserTypes user : allUsersCreated) {
+            if (user.getUserType() == UserTypes.UserType.ARTIST) {
+                if (((UserArtist) user).getAllPlays() != 0
+                    || ((UserArtist) user).getMerchRevenue() != 0) {
+                    allArtists.add((UserArtist) user);
+                }
+            }
+        }
+
+        allArtists.sort(new Comparator<UserArtist>() {
+            @Override
+            public int compare(final UserArtist artist1, final UserArtist artist2) {
+                if (artist1.getMerchRevenue() + artist1.getSongRevenue()
+                    == artist2.getMerchRevenue() + artist2.getSongRevenue()) {
+                    return artist1.getUsername().compareTo(artist2.getUsername());
+                }
+                return Double.compare(artist2.getMerchRevenue() + artist2.getSongRevenue(),
+                        artist1.getMerchRevenue() + artist1.getSongRevenue());
+            }
+        });
+
+        for (int iter = 0; iter < allArtists.size(); ++iter) {
+            ObjectNode newArtistInfo = new ObjectMapper().createObjectNode();
+            UserArtist artist = allArtists.get(iter);
+            newArtistInfo.put("merchRevenue", artist.getMerchRevenue());
+            newArtistInfo.put("songRevenue", artist.getSongRevenue());
+            newArtistInfo.put("ranking", iter + 1);
+
+            /* Get the song with most plays. */
+            String mostPlayedSong = null;
+            for (String song : artist.getSongsRevenue().keySet()) {
+                if (mostPlayedSong == null) {
+                    mostPlayedSong = song;
+                } else {
+                    if (artist.getSongsRevenue().get(song)
+                            > artist.getSongsRevenue().get(mostPlayedSong)) {
+                        mostPlayedSong = song;
+                    } else if (artist.getSongsRevenue().get(song)
+                            .equals(artist.getSongsRevenue().get(mostPlayedSong))) {
+                        if (mostPlayedSong.compareTo(song) > 0) {
+                            mostPlayedSong = song;
+                        }
+                    }
+                }
+            }
+
+            if (mostPlayedSong == null || allArtists.get(iter).getSongRevenue() == 0) {
+                newArtistInfo.put("mostProfitableSong", "N/A");
+            } else {
+                newArtistInfo.put("mostProfitableSong", mostPlayedSong);
+            }
+            output.put(allArtists.get(iter).getUsername(), newArtistInfo);
+        }
+
         return output;
+    }
+
+    /**
+     * Funciton that returns the notifications of a user.
+     * @param username          username of the user
+     * @return                  the notifications of the user
+     */
+    public ArrayNode getNotifications(final String username) {
+        UserNormal toFind = (UserNormal) findMyUser(username);
+        return toFind.getNotifications();
+    }
+
+    /**
+     * Function that returns the user with a given playback.
+     * @param playback          playback of the user
+     * @return                  the user with the given playback
+     */
+    public UserNormal getUserWithPlayback(final Playback playback) {
+        for (UserTypes user : allUsersCreated) {
+            if (user.getUserType() == UserTypes.UserType.USER) {
+                UserNormal normalUser = (UserNormal) user;
+                if (normalUser.getMusicPlayer().getPlayback() == playback) {
+                    return normalUser;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Function that performs the
+     * subscribe request from a user.
+     * @param username      username of the user
+     * @return              status of the command
+     */
+    public String subscribe(final String username) {
+        UserNormal toFind = (UserNormal) findMyUser(username);
+        if (toFind == null) {
+            return "The username " + username + " doesn't exist.";
+        }
+
+        if (toFind.getSelectedPage() == null) {
+            return "To subscribe you need to be on the page of an artist or host.";
+        }
+
+        return toFind.getSelectedPage().subscribe(toFind);
+    }
+
+    /**
+     * Context for strategy pattern used for recommendations.
+     * @param username
+     * @param recommendationType
+     * @return
+     */
+    public String updateRecommendations(final String username, final String recommendationType) {
+        UserNormal user = (UserNormal) findMyUser(username);
+        Playback playback = user.getMusicPlayer().getPlayback();
+
+        /* Get the current state of playback. */
+        playback.checkPlayback();
+
+        RecommendationStrategy recommendation = null;
+
+        switch (recommendationType) {
+            case "fans_playlist" -> {
+                recommendation = new FansPlaylistConcrete();
+                break;
+            } case "random_song" -> {
+                recommendation = new RandomSongConcrete();
+                break;
+            } case "random_playlist" -> {
+                recommendation = new RandomPlaylistConcrete();
+                break;
+            } default -> System.out.println("Invalid recommendation type.");
+        }
+
+        return recommendation.createRecommendation(user);
+    }
+
+    /**
+     * Function that changes the current page of a user.
+     * @param username          username of the user
+     * @return                  status of the command
+     */
+    public String previousPage(final String username) {
+        UserNormal user = (UserNormal) findMyUser(username);
+        return user.previousPage();
+    }
+
+    /**
+     * Function that changes the current page of a user.
+     * @param username          username of the user
+     * @return                  status of the command
+     */
+    public String nextPage(final String username) {
+        UserNormal user = (UserNormal) findMyUser(username);
+        return user.nextPage();
+    }
+
+    /**
+     * Function that adds an ad to a user playback.
+     * @param username          username of the user
+     * @param price             price of the ad
+     * @return                  status of the command
+     */
+    public String adBreak(final String username, final int price) {
+        UserNormal user = (UserNormal) findMyUser(username);
+        if (user == null) {
+            return "The username " + username + " doesn't exist.";
+        }
+
+        Playback playback = user.getMusicPlayer().getPlayback();
+
+        if (playback == null || playback.getCurrTrack() == null) {
+            return username + " is not playing any music.";
+        }
+
+        return playback.adBreak(user, price);
     }
 }

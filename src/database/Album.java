@@ -8,6 +8,7 @@ import lombok.Getter;
 import musicplayer.AudioCollection;
 import musicplayer.MusicPlayer;
 import musicplayer.Playback;
+import users.UserNormal;
 
 public final class Album extends AudioCollection {
     private String name;
@@ -33,14 +34,12 @@ public final class Album extends AudioCollection {
 
     @Override
     public int getTimeRemained(final Playback playback) {
-        checkTrack(playback);
-        if (playback.getIndexSong() == this.songs.size()) {
+        if (playback.getIndexInQueue() == playback.getQueueSongs().size()) {
             return 0;
         }
 
         if (!playback.isShuffle()) {
-            return this.songs.get(playback.getIndexSong()).getDuration()
-                    - playback.getTimeWatched();
+            return currPlayingSong(playback).getDuration() - playback.getTimeWatched();
         } else {
             return shuffledPlaylist.get(playback.getIndexSongShuffled()).getDuration()
                     - playback.getTimeWatched();
@@ -53,7 +52,7 @@ public final class Album extends AudioCollection {
      * @param playback
      */
     public void goToNextSong(final Playback playback) {
-        if (playback.getIndexSong() == this.getSongs().size()) {
+        if (playback.getIndexSong() == playback.getQueueSongs().size()) {
             return;
         }
 
@@ -71,19 +70,20 @@ public final class Album extends AudioCollection {
         } else {
             if (playback.getRepeat() != 2) {
                 /* Go to next song. */
-                playback.setIndexSong(playback.getIndexSong() + 1);
+                playback.setIndexInQueue(playback.getIndexInQueue() + 1);
             }
 
             if (playback.getRepeat() == 1) {
                 /* Repeat the same song. */
-                playback.setIndexSong(playback.getIndexSong() % getSongs().size());
+                playback.setIndexInQueue(playback.getIndexInQueue()
+                        % playback.getQueueSongs().size());
             }
         }
+
     }
 
     @Override
     public void nextTrack(final Playback playback) {
-        checkTrack(playback);
         goToNextSong(playback);
 
         if (playback.isShuffle()) {
@@ -144,7 +144,6 @@ public final class Album extends AudioCollection {
 
     @Override
     public void prevTrack(final Playback playback) {
-        checkTrack(playback);
 
         if (playback.getTimeWatched() > 0) {
             playback.setTimeWatched(0);
@@ -155,56 +154,12 @@ public final class Album extends AudioCollection {
         playback.setLastInteracted(MusicPlayer.getTimestamp());
     }
 
-    @Override
-    public void checkTrack(final Playback playback) {
-        if (playback.getIndexSong() == this.getSongs().size()) {
-            return;
-        }
-        if (playback.isPlayPause() && !playback.isStopped()) {
-            Integer updateTimeWatched = playback.getTimeWatched()
-                    + MusicPlayer.getTimestamp() - playback.getLastInteract();
-            playback.setTimeWatched(updateTimeWatched);
-            if (!playback.isShuffle()) {
-                while (playback.getTimeWatched()
-                        > this.getSongs().get(playback.getIndexSong()).getDuration()) {
-                    updateTimeWatched = playback.getTimeWatched()
-                            - this.getSongs().get(playback.getIndexSong()).getDuration();
-                    playback.setTimeWatched(updateTimeWatched);
-                    this.goToNextSong(playback);
-                    /* Check if we have no song running. */
-                    if (playback.getIndexSong() == this.getSongs().size()) {
-                        playback.setPlayPause(false);
-                        playback.setCurrTrack(null);
-                        break;
-                    }
-                }
-            } else {
-                while (playback.getTimeWatched()
-                        > shuffledPlaylist.get(playback.getIndexSongShuffled()).getDuration()) {
-                    updateTimeWatched = playback.getTimeWatched()
-                            - shuffledPlaylist.get(playback.getIndexSongShuffled()).getDuration();
-                    playback.setTimeWatched(updateTimeWatched);
-                    this.goToNextSong(playback);
-                    /* Check if we have no song running. */
-                    if (playback.getIndexSongShuffled() == this.getSongs().size()) {
-                        playback.setPlayPause(false);
-                        playback.setShuffle(false);
-                        playback.setCurrTrack(null);
-                        break;
-                    }
-                }
-            }
-            playback.setLastInteracted(MusicPlayer.getTimestamp());
-        }
-    }
-
     public String getName() {
         return name;
     }
 
     @Override
     public String getTrack(final Playback playback) {
-        checkTrack(playback);
         if (playback.getCurrTrack() == null) {
             return "";
         }
@@ -212,7 +167,7 @@ public final class Album extends AudioCollection {
         if (playback.isShuffle()) {
             return shuffledPlaylist.get(playback.getIndexSongShuffled()).getName();
         } else {
-            return songs.get(playback.getIndexSong()).getName();
+            return currPlayingSong(playback).getName();
         }
     }
 
@@ -259,14 +214,65 @@ public final class Album extends AudioCollection {
      * @return              current playing song
      */
     public Song currPlayingSong(final Playback playback) {
-        if (playback.getIndexSong() == this.songs.size()) {
+        if (playback.getIndexSong() == playback.getQueueSongs().size()) {
             return null;
         }
 
         if (!playback.isShuffle()) {
-            return this.getSongs().get(playback.getIndexSong());
+            return playback.getQueueSongs().get(playback.getIndexInQueue());
         } else {
             return shuffledPlaylist.get(playback.getIndexSongShuffled());
         }
+    }
+
+    @Override
+    public void updatePlays(final Playback playback) {
+        if (playback.getIndexSong() == playback.getQueueSongs().size()) {
+            return;
+        }
+
+        currPlayingSong(playback).updatePlays(playback);
+    }
+
+    @Override
+    public int getPlays() {
+        int totalPlays = 0;
+        for (Song song : MyDatabase.getInstance().getAllSongsCreated()) {
+            if (song.getArtist().equals(owner) && song.getAlbum().equals(name)) {
+                totalPlays += song.getPlays();
+            }
+        }
+        for (Song song : MyDatabase.getInstance().getDeletedSongs()) {
+            if (song.getArtist().equals(owner) && song.getAlbum().equals(name)) {
+                totalPlays += song.getPlays();
+            }
+        }
+        return totalPlays;
+    }
+
+    /**
+     * Function that computes the number of plays
+     * of an album for a specific user.
+     * @param user
+     * @return
+     */
+    public int getPlays(final UserNormal user) {
+        int plays = 0;
+        for (Song song : user.getHistorySongs()) {
+            if (song.getAlbum().equals(name)) {
+                plays++;
+            }
+        }
+        for (Song song : user.getHistorySongsPremium()) {
+            if (song.getAlbum().equals(name)) {
+                plays++;
+            }
+        }
+        for (Song song : user.getAllSongsPlayed()) {
+            if (song.getAlbum().equals(name)) {
+                plays++;
+            }
+        }
+        return plays;
     }
 }

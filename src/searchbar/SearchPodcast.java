@@ -22,7 +22,6 @@ public final class SearchPodcast extends Search {
      */
     public void searchTrack(final ArrayList<Podcast> podcasts, final Filters myfilters) {
         results = new ArrayList<>();
-
         for (Podcast podcast : podcasts) {
             boolean podcastWorks = podcast.getName() == null
                     || myfilters.getName() == null

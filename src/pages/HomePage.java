@@ -4,10 +4,16 @@ import java.util.ArrayList;
 
 import database.Playlist;
 import database.Song;
+import lombok.Getter;
+import musicplayer.AudioCollection;
 import musicplayer.MusicPlayer;
+import users.UserNormal;
 
 public final class HomePage extends UserPage {
     private MusicPlayer musicPlayer;
+
+    @Getter
+    private ArrayList<AudioCollection> recommendations = new ArrayList<AudioCollection>();
 
     public HomePage(final MusicPlayer musicPlayer) {
         this.musicPlayer = musicPlayer;
@@ -54,6 +60,47 @@ public final class HomePage extends UserPage {
 
         result += "]";
 
+        /* Add song recommendations. */
+        result += "\n\nSong recommendations:\n\t[";
+
+        boolean firstSong = true;
+        for (AudioCollection audio : recommendations) {
+            if (audio.getType() == AudioCollection.AudioType.SONG) {
+                Song song = (Song) audio;
+                if (firstSong) {
+                    result += song.getName();
+                    firstSong = false;
+                } else {
+                    result += ", " + song.getName();
+                }
+            }
+        }
+
+        result += "]";
+
+        /* Add playlists recommendations. */
+        result += "\n\nPlaylists recommendations:\n\t[";
+
+        boolean firstPlaylistRecommendation = true;
+        for (AudioCollection audio : recommendations) {
+            if (audio.getType() == AudioCollection.AudioType.PLAYLIST) {
+                Playlist playlist = (Playlist) audio;
+                if (firstPlaylistRecommendation) {
+                    result += playlist.getName();
+                    firstPlaylistRecommendation = false;
+                } else {
+                    result += ", " + playlist.getName();
+                }
+            }
+        }
+
+        result += "]";
+
         return result;
+    }
+
+    @Override
+    public String subscribe(final UserNormal user) {
+        return "You can subscribe only to artists and hosts.";
     }
 }

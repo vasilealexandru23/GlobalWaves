@@ -3,6 +3,8 @@ package users;
 import lombok.Getter;
 import java.util.ArrayList;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import database.MyDatabase;
 
 @Getter
@@ -76,4 +78,10 @@ public abstract class UserTypes {
      * @return status of command
      */
     public abstract String removeUser(MyDatabase database);
+
+    /**
+     * Function that returns the statistics of the user.
+     * @return return the statistics of the user
+     */
+    public abstract ObjectNode getStatistics();
 }
